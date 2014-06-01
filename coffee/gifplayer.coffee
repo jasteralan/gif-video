@@ -11,8 +11,7 @@ class GIFVideo
     
     @canvas  = new Canvas @block
     @frames  = @canvas.frames
-    @tcanvas = @canvas.tmp_canvas 
-    # @player = new Player()
+    @tcanvas = @canvas.tmp_canvas  
     
     @_loadGif()
 
@@ -56,6 +55,8 @@ class GIFVideo
   gceHandler: (gce) =>
     @_pushFrame()
 
+    console.log gce.delayTime
+    
     @frame = null
     @delay          = gce.delayTime;
     @transparency   = gce.transparencyIndex || null
@@ -69,10 +70,9 @@ class GIFVideo
       data : @frame.getImageData 0, 0, @hdr.width, @hdr.height
       delay: @delay
 
-    @canvas.drawFrame() 
-    #if !@set_first_frame
-    #  @canvas.drawFrame() 
-    #  @set_first_frame = true 
+    if !@set_first_frame
+      @canvas.drawFrame(0) 
+      @set_first_frame = true 
 
   imgHandler: (img) =>
     @frame = @tcanvas.getContext('2d') if !@frame
@@ -109,7 +109,13 @@ class GIFVideo
       @_eofCallBack()
 
   _eofCallBack: ->
+    console.log @frames.frames
+
+    @player = @canvas.getPlayer()
     console.log 'finish parse'
+
+  getPlayer: ->
+    @player
 
   _getHandlerwithDrawProgress: (fn) ->
     (block) =>
@@ -118,7 +124,7 @@ class GIFVideo
 
 class Canvas 
   constructor: (@block) -> 
-    @progress_height = 15
+    @progress_height = 5
     @frames = new Frames()  
     @_init()
 
@@ -126,7 +132,7 @@ class Canvas
     parent = @block.parentNode
     div    = document.createElement("div")
     
-    @tmp_canvas = document.createElement "canvas"
+    @tmp_canvas= document.createElement "canvas"
     @canvas    = document.createElement("canvas")
     @ctx       = @canvas.getContext("2d")
 
@@ -148,12 +154,12 @@ class Canvas
     @tmp_canvas.style.height= "#{h}px"
     @tmp_canvas.getContext('2d').setTransform(1, 0, 0, 1, 0, 0)
 
-  drawFrame : ->
-    data = @frames.getFrame(@frames.getLength()-1).data
+  drawFrame : (index)->
+    data = @frames.getFrame(index).data
     @tmp_canvas
       .getContext "2d" 
       .putImageData data, 0, 0
-    #@ctx.globalCompositeOperation = "copy"
+    @ctx.globalCompositeOperation = "copy"
     @ctx.drawImage @tmp_canvas, 0, 0
 
   drawError: (errorType)->
@@ -175,20 +181,17 @@ class Canvas
     @ctx.stroke()
 
   drawProgress: (pos, length)->
-    console.log 'drawProgress'
     d = 
       top    : @canvas.height - @progress_height
       mid    : (pos / length) * @canvas.width
       width  : @canvas.width
       height : @progress_height
 
-    console.log d
-
-    @ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'
-    @ctx.fillRect d.mid, d.top, d.width - d.mid, d.height
-    
-    @ctx.fillStyle = 'rgba(255, 0, 22, .8)'
+    @ctx.fillStyle = '#79bca5'
     @ctx.fillRect 0, d.top, d.mid, d.height
+
+  getPlayer: ->
+    new Player @, @frames 
 
 class Frames
   constructor: -> @frames = []
@@ -200,25 +203,12 @@ class Frames
       delay: frame.delay
 
 class Player 
-  constructor: (@frames, autoplay) ->
-    @index = 0
-    @curFrame   = @delayInfo = null
-    @showingInfo= @pinned = false
-    @playing = false
+  constructor: (@canvas, @frames) ->
+    @index  = 0
+    @playing= false
+    @frames_len = @frames.getLength()   
 
-    if autoplay then @play() else @drawFrame()
-
-  drwFrameAfter: (delta)->
-      @index = (@index + delta + @frames.length) % @frames.length
-      @curFrame  = @index + 1
-      @delayInfo = frames[i].delay
-      @drawFrame()    
-
-  drawFrame : ->
-      #@curFrame = @index
-      #@tmpCanvas.getContext "2d" .putImageData frames[i].data, 0, 0
-      #@ctx.globalCompositeOperation = "copy"
-      #@ctx.drawImage @tmpCanvas, 0, 0
+  pause: -> @playing = false
 
   play: ->
     @playing = true
@@ -227,22 +217,25 @@ class Player
   _playLoop: =>
     return true if !@playing
 
-    drawFrameAfter 1
-    setTimeout @_playLoop, frames[@index].delay*10 || 100
+    @drawFrameAfter 1
+    setTimeout @_playLoop, @_getDelay
 
-  pause: ->
-    @playing = false
+  drawFrameAfter: (delta) ->
+    console.log @index, @_getDelay()
 
-  getFrameLength: ->
-    frames.length
+    @index = (@index + delta + @frames_len) % @frames_len
+    @canvas.drawFrame @index
+
+  _getDelay: =>
+    @frames.getFrame(@index).delay*10 || 100
 
   moveTo: (index) ->
     @index = index
-    @drawFrame()
-
+    @_canvas.drawFrame(@index) 
 
 $ ->
   $('[data-gifvideo]').each (k, block)->
-    new GIFVideo block
+    gifvideo = new GIFVideo block
+    window.gifvideo = gifvideo 
 
 

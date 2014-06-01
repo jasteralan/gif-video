@@ -75,6 +75,7 @@
 
     GIFVideo.prototype.gceHandler = function(gce) {
       this._pushFrame();
+      console.log(gce.delayTime);
       this.frame = null;
       this.delay = gce.delayTime;
       this.transparency = gce.transparencyIndex || null;
@@ -90,7 +91,10 @@
         data: this.frame.getImageData(0, 0, this.hdr.width, this.hdr.height),
         delay: this.delay
       });
-      return this.canvas.drawFrame();
+      if (!this.set_first_frame) {
+        this.canvas.drawFrame(0);
+        return this.set_first_frame = true;
+      }
     };
 
     GIFVideo.prototype.imgHandler = function(img) {
@@ -143,7 +147,13 @@
     };
 
     GIFVideo.prototype._eofCallBack = function() {
+      console.log(this.frames.frames);
+      this.player = this.canvas.getPlayer();
       return console.log('finish parse');
+    };
+
+    GIFVideo.prototype.getPlayer = function() {
+      return this.player;
     };
 
     GIFVideo.prototype._getHandlerwithDrawProgress = function(fn) {
@@ -162,7 +172,7 @@
   Canvas = (function() {
     function Canvas(block) {
       this.block = block;
-      this.progress_height = 15;
+      this.progress_height = 5;
       this.frames = new Frames();
       this._init();
     }
@@ -192,10 +202,11 @@
       return this.tmp_canvas.getContext('2d').setTransform(1, 0, 0, 1, 0, 0);
     };
 
-    Canvas.prototype.drawFrame = function() {
+    Canvas.prototype.drawFrame = function(index) {
       var data;
-      data = this.frames.getFrame(this.frames.getLength() - 1).data;
+      data = this.frames.getFrame(index).data;
       this.tmp_canvas.getContext("2d").putImageData(data, 0, 0);
+      this.ctx.globalCompositeOperation = "copy";
       return this.ctx.drawImage(this.tmp_canvas, 0, 0);
     };
 
@@ -220,18 +231,18 @@
 
     Canvas.prototype.drawProgress = function(pos, length) {
       var d;
-      console.log('drawProgress');
       d = {
         top: this.canvas.height - this.progress_height,
         mid: (pos / length) * this.canvas.width,
         width: this.canvas.width,
         height: this.progress_height
       };
-      console.log(d);
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      this.ctx.fillRect(d.mid, d.top, d.width - d.mid, d.height);
-      this.ctx.fillStyle = 'rgba(255, 0, 22, .8)';
+      this.ctx.fillStyle = '#79bca5';
       return this.ctx.fillRect(0, d.top, d.mid, d.height);
+    };
+
+    Canvas.prototype.getPlayer = function() {
+      return new Player(this, this.frames);
     };
 
     return Canvas;
@@ -263,28 +274,19 @@
   })();
 
   Player = (function() {
-    function Player(frames, autoplay) {
+    function Player(canvas, frames) {
+      this.canvas = canvas;
       this.frames = frames;
+      this._getDelay = __bind(this._getDelay, this);
       this._playLoop = __bind(this._playLoop, this);
       this.index = 0;
-      this.curFrame = this.delayInfo = null;
-      this.showingInfo = this.pinned = false;
       this.playing = false;
-      if (autoplay) {
-        this.play();
-      } else {
-        this.drawFrame();
-      }
+      this.frames_len = this.frames.getLength();
     }
 
-    Player.prototype.drwFrameAfter = function(delta) {
-      this.index = (this.index + delta + this.frames.length) % this.frames.length;
-      this.curFrame = this.index + 1;
-      this.delayInfo = frames[i].delay;
-      return this.drawFrame();
+    Player.prototype.pause = function() {
+      return this.playing = false;
     };
-
-    Player.prototype.drawFrame = function() {};
 
     Player.prototype.play = function() {
       this.playing = true;
@@ -295,21 +297,23 @@
       if (!this.playing) {
         return true;
       }
-      drawFrameAfter(1);
-      return setTimeout(this._playLoop, frames[this.index].delay * 10 || 100);
+      this.drawFrameAfter(1);
+      return setTimeout(this._playLoop, this._getDelay);
     };
 
-    Player.prototype.pause = function() {
-      return this.playing = false;
+    Player.prototype.drawFrameAfter = function(delta) {
+      console.log(this.index, this._getDelay());
+      this.index = (this.index + delta + this.frames_len) % this.frames_len;
+      return this.canvas.drawFrame(this.index);
     };
 
-    Player.prototype.getFrameLength = function() {
-      return frames.length;
+    Player.prototype._getDelay = function() {
+      return this.frames.getFrame(this.index).delay * 10 || 100;
     };
 
     Player.prototype.moveTo = function(index) {
       this.index = index;
-      return this.drawFrame();
+      return this._canvas.drawFrame(this.index);
     };
 
     return Player;
@@ -318,7 +322,9 @@
 
   $(function() {
     return $('[data-gifvideo]').each(function(k, block) {
-      return new GIFVideo(block);
+      var gifvideo;
+      gifvideo = new GIFVideo(block);
+      return window.gifvideo = gifvideo;
     });
   });
 
