@@ -75,7 +75,6 @@
 
     GIFVideo.prototype.gceHandler = function(gce) {
       this._pushFrame();
-      console.log(gce.delayTime);
       this.frame = null;
       this.delay = gce.delayTime;
       this.transparency = gce.transparencyIndex || null;
@@ -147,9 +146,7 @@
     };
 
     GIFVideo.prototype._eofCallBack = function() {
-      console.log(this.frames.frames);
-      this.player = this.canvas.getPlayer();
-      return console.log('finish parse');
+      return this.canvas.setPlayer();
     };
 
     GIFVideo.prototype.getPlayer = function() {
@@ -178,16 +175,29 @@
     }
 
     Canvas.prototype._init = function() {
-      var div, parent;
+      var div, h, parent, ul, w;
+      w = this.block.getAttribute('data-width');
+      h = this.block.getAttribute('data-height');
       parent = this.block.parentNode;
       div = document.createElement("div");
       this.tmp_canvas = document.createElement("canvas");
       this.canvas = document.createElement("canvas");
       this.ctx = this.canvas.getContext("2d");
-      div.width = this.canvas.width = this.block.width;
-      div.height = this.canvas.height = this.block.height;
+      this.canvas.width = w;
+      this.canvas.height = h;
       div.className = "gifvideo";
+      div.setAttribute("style", "width:" + w + "px;height:" + h + "px");
+      ul = document.createElement("ul");
+      this.li_play = document.createElement("li");
+      this.li_play.className = "play";
+      this.li_play.innerHTML = "play";
+      this.li_stop = document.createElement("li");
+      this.li_stop.className = "stop";
+      this.li_stop.innerHTML = "stop";
+      ul.appendChild(this.li_play);
+      ul.appendChild(this.li_stop);
       div.appendChild(this.canvas);
+      div.appendChild(ul);
       parent.insertBefore(div, this.block);
       return parent.removeChild(this.block);
     };
@@ -206,7 +216,6 @@
       var data;
       data = this.frames.getFrame(index).data;
       this.tmp_canvas.getContext("2d").putImageData(data, 0, 0);
-      this.ctx.globalCompositeOperation = "copy";
       return this.ctx.drawImage(this.tmp_canvas, 0, 0);
     };
 
@@ -241,8 +250,15 @@
       return this.ctx.fillRect(0, d.top, d.mid, d.height);
     };
 
-    Canvas.prototype.getPlayer = function() {
-      return new Player(this, this.frames);
+    Canvas.prototype.setPlayer = function() {
+      var player;
+      player = new Player(this, this.frames);
+      this.li_play.onclick = function() {
+        return player.play();
+      };
+      return this.li_stop.onclick = function() {
+        return player.stop();
+      };
     };
 
     return Canvas;
@@ -284,6 +300,12 @@
       this.frames_len = this.frames.getLength();
     }
 
+    Player.prototype.stop = function() {
+      this.playing = false;
+      this.index = 0;
+      return this.canvas.drawFrame(this.index);
+    };
+
     Player.prototype.pause = function() {
       return this.playing = false;
     };
@@ -294,15 +316,16 @@
     };
 
     Player.prototype._playLoop = function() {
+      var delay;
       if (!this.playing) {
         return true;
       }
       this.drawFrameAfter(1);
-      return setTimeout(this._playLoop, this._getDelay);
+      delay = this._getDelay();
+      return setTimeout(this._playLoop, delay);
     };
 
     Player.prototype.drawFrameAfter = function(delta) {
-      console.log(this.index, this._getDelay());
       this.index = (this.index + delta + this.frames_len) % this.frames_len;
       return this.canvas.drawFrame(this.index);
     };
@@ -313,7 +336,7 @@
 
     Player.prototype.moveTo = function(index) {
       this.index = index;
-      return this._canvas.drawFrame(this.index);
+      return this.canvas.drawFrame(this.index);
     };
 
     return Player;

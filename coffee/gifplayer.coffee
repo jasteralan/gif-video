@@ -1,7 +1,7 @@
 class GIFVideo
   constructor: (@block, opts) ->
     @opts = opts || {}
-    @opts.gif = $(@block).data('src')
+    @opts.gif    = $(@block).data 'src'
 
     @stream = @hdr = @transparency = null
     @delay  = @disposalMethod = @lastDisposalMethod = null
@@ -55,8 +55,6 @@ class GIFVideo
   gceHandler: (gce) =>
     @_pushFrame()
 
-    console.log gce.delayTime
-    
     @frame = null
     @delay          = gce.delayTime;
     @transparency   = gce.transparencyIndex || null
@@ -109,10 +107,7 @@ class GIFVideo
       @_eofCallBack()
 
   _eofCallBack: ->
-    console.log @frames.frames
-
-    @player = @canvas.getPlayer()
-    console.log 'finish parse'
+    @canvas.setPlayer()
 
   getPlayer: ->
     @player
@@ -123,23 +118,41 @@ class GIFVideo
       @canvas.drawProgress @stream.pos, @stream.data.length
 
 class Canvas 
-  constructor: (@block) -> 
+  constructor: (@block) ->
     @progress_height = 5
     @frames = new Frames()  
     @_init()
 
   _init: ->
+    w = @block.getAttribute 'data-width' 
+    h = @block.getAttribute 'data-height'
+
     parent = @block.parentNode
-    div    = document.createElement("div")
+    div    = document.createElement "div"
     
     @tmp_canvas= document.createElement "canvas"
-    @canvas    = document.createElement("canvas")
-    @ctx       = @canvas.getContext("2d")
+    @canvas    = document.createElement "canvas"
+    @ctx       = @canvas.getContext "2d"
 
-    div.width  = @canvas.width = @block.width
-    div.height = @canvas.height= @block.height
+    @canvas.width = w
+    @canvas.height= h
+
     div.className = "gifvideo"
+    div.setAttribute "style", "width:#{w}px;height:#{h}px"
+
+    ul = document.createElement "ul"
+    @li_play = document.createElement "li"
+    @li_play.className = "play"
+    @li_play.innerHTML = "play"
+    @li_stop = document.createElement "li"
+    @li_stop.className = "stop"
+    @li_stop.innerHTML = "stop"
+
+    ul.appendChild @li_play
+    ul.appendChild @li_stop
+    
     div.appendChild @canvas
+    div.appendChild ul
 
     parent.insertBefore div, @block
     parent.removeChild  @block
@@ -159,7 +172,7 @@ class Canvas
     @tmp_canvas
       .getContext "2d" 
       .putImageData data, 0, 0
-    @ctx.globalCompositeOperation = "copy"
+    #@ctx.globalCompositeOperation = "copy"
     @ctx.drawImage @tmp_canvas, 0, 0
 
   drawError: (errorType)->
@@ -190,8 +203,10 @@ class Canvas
     @ctx.fillStyle = '#79bca5'
     @ctx.fillRect 0, d.top, d.mid, d.height
 
-  getPlayer: ->
-    new Player @, @frames 
+  setPlayer: ->
+    player = new Player @, @frames 
+    @li_play.onclick = -> player.play()
+    @li_stop.onclick = -> player.stop()  
 
 class Frames
   constructor: -> @frames = []
@@ -208,6 +223,11 @@ class Player
     @playing= false
     @frames_len = @frames.getLength()   
 
+  stop : -> 
+    @playing = false;
+    @index   = 0;
+    @canvas.drawFrame @index
+
   pause: -> @playing = false
 
   play: ->
@@ -218,11 +238,10 @@ class Player
     return true if !@playing
 
     @drawFrameAfter 1
-    setTimeout @_playLoop, @_getDelay
+    delay = @_getDelay()
+    setTimeout @_playLoop, delay
 
   drawFrameAfter: (delta) ->
-    console.log @index, @_getDelay()
-
     @index = (@index + delta + @frames_len) % @frames_len
     @canvas.drawFrame @index
 
@@ -231,7 +250,7 @@ class Player
 
   moveTo: (index) ->
     @index = index
-    @_canvas.drawFrame(@index) 
+    @canvas.drawFrame(@index) 
 
 $ ->
   $('[data-gifvideo]').each (k, block)->
