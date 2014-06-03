@@ -1,7 +1,8 @@
-class GIFVideo
+
+class this.GIFVideo
   constructor: (@block, opts) ->
     @opts = opts || {}
-    @opts.gif    = $(@block).data 'src'
+    @opts.gif    = @block.getAttribute 'data-src'
 
     @stream = @hdr = @transparency = null
     @delay  = @disposalMethod = @lastDisposalMethod = null
@@ -251,10 +252,5 @@ class Player
   moveTo: (index) ->
     @index = index
     @canvas.drawFrame(@index) 
-
-$ ->
-  $('[data-gifvideo]').each (k, block)->
-    gifvideo = new GIFVideo block
-    window.gifvideo = gifvideo 
 
 

@@ -6,6 +6,27 @@
 		<title>	Example gif</title>
 
 		<style>
+			.gifvideo > ul {
+				margin: 0;
+				padding: 0;
+				list-style: none;
+			}
+			.gifvideo > ul > li {
+				display: inline-block;
+				margin-right: 10px;
+				width: 80px;
+				height: 30px;
+				line-height: 30px;
+				background: #cdb;
+				border-radius: 3px;
+				color: #eee;
+				cursor: pointer;
+			}
+
+			.gifvideo > ul > li:hover {
+				background:#9EB389;
+			}
+
 		</style>
 	</head>
 	
@@ -17,9 +38,15 @@
 				 data-width="400" data-height="218"></div>
 		</center>
 		
-		<script src="//code.jquery.com/jquery-git2.js"></script>
-		<script src="js/jsgif.js"></script>
-		<script src="js/gifplayer.js"></script>
+		<script src="js/script.min.js"></script>
+		<script>
+			[].forEach.call(
+			  	document.querySelectorAll('[data-gifvideo]'), 
+			  	function(element){
+			    	new GIFVideo(element);
+			  	}
+			);
+		</script>
 	</body>
 
 </html>

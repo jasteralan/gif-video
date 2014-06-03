@@ -1,8 +1,8 @@
 (function() {
-  var Canvas, Frames, GIFVideo, Player,
+  var Canvas, Frames, Player,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-  GIFVideo = (function() {
+  this.GIFVideo = (function() {
     function GIFVideo(block, opts) {
       this.block = block;
       this.eofHandler = __bind(this.eofHandler, this);
@@ -10,7 +10,7 @@
       this.gceHandler = __bind(this.gceHandler, this);
       this.hdrHandler = __bind(this.hdrHandler, this);
       this.opts = opts || {};
-      this.opts.gif = $(this.block).data('src');
+      this.opts.gif = this.block.getAttribute('data-src');
       this.stream = this.hdr = this.transparency = null;
       this.delay = this.disposalMethod = this.lastDisposalMethod = null;
       this.frame = this.lastImg = null;
@@ -342,13 +342,5 @@
     return Player;
 
   })();
-
-  $(function() {
-    return $('[data-gifvideo]').each(function(k, block) {
-      var gifvideo;
-      gifvideo = new GIFVideo(block);
-      return window.gifvideo = gifvideo;
-    });
-  });
 
 }).call(this);
